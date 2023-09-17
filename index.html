@@ -1,0 +1,85 @@
+<html>
+
+<body>
+    <title>Dnalloh's NPC Maker</title>
+    <h1>
+        Dnalloh's NPC Maker
+    </h1>
+
+    <p>
+        To begin making a new character, use options listed below.
+    </p>
+
+    <form>
+        <p>
+            <label for="char_name">Name (leave blank to randomize)</label>
+            <input type="text" id="char_name" name="fname">
+        </p>
+
+        <p>
+            <label for="size">Number of people in town:</label>
+            <select name="size" id="size">
+                <option value="Random">Random</option>
+                <option value="0-99">0-99</option>
+                <option value="100-199">100-999</option>
+                <option value="1000-2999">1000-2999</option>
+                <option value="3000-4999">3000-4999</option>
+                <option value="5000+">5000+</option>
+            </select>
+        </p>
+        <p>
+            <label for="tech">Technology Level:</label>
+            <select name="tech" id="tech">
+                <option value="Random">Random</option>
+                <option value="stone age">Stone age</option>
+                <option value="iron age">Iron age</option>
+                <option value="middle ages">Middle ages</option>
+                <option value="industrial age">Industrial age</option>
+                <option value="space age">Space age</option>
+            </select>
+        </p>
+        <p>
+            <label for="mLevel">Magic Level:</label>
+            <select name="mLevel" id="mLevel">
+                <option value="Random">Random</option>
+                <option value="non-existent">Non-existent</option>
+                <option value="rare">Rare</option>
+                <option value="available to the rich">Available to the rich</option>
+                <option value="available to most people">Available to most</option>
+                <option value="used for daily tasks">Used for daily tasks</option>
+            </select>
+        </p>
+        <p>
+            <label for="role">Describe the character's profession, background, or purpose. (leave blank to
+                randomize)</label><br>
+            <textarea name="role" id="role" rows="4" cols="75" maxlength="300"></textarea>
+        </p>
+        <p>
+            <span id="charCount">0</span>/<span id="maxChars">300</span>
+        </p>
+        <p>
+            <input type="submit" value="Submit">
+        </p>
+    </form>
+    <script>
+        // Get references to the textarea and character count elements
+        const textarea = document.getElementById("role");
+        const charCount = document.getElementById("charCount");
+        const maxChars = document.getElementById("maxChars");
+
+        // Add an event listener to the textarea for input changes
+        textarea.addEventListener("input", function () {
+            const currentCount = textarea.value.length;
+            charCount.textContent = currentCount;
+
+            // Check if the current count exceeds the maximum length
+            if (currentCount > parseInt(maxChars.textContent)) {
+                textarea.value = textarea.value.slice(0, parseInt(maxChars.textContent));
+                charCount.textContent = maxChars.textContent;
+            }
+        });
+    </script>
+</body>
+
+
+</html>
