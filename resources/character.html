@@ -1,12 +1,75 @@
+<!DOCTYPE html>
 <html>
 
 <head>
     <title>My New Character</title>
+    <style>
+        .attribute-container {
+            display: flex;
+            justify-content: space-between;
+            border: 2px outset black;
+        }
+
+        .column {
+            text-align: center;
+        }
+
+        .attribute {
+            border: 2px outset black;
+            background-color: rgb(141, 155, 167);
+            text-align: center;
+            font-weight: bold;
+        }
+
+        .score {
+            text-align: center;
+        }
+    </style>
 </head>
 
 <body>
-    <h1>Hello, {{ .Name }}</h1>
-    <p>You live in a {{ .Size }} town.</p>
+    <div id="attribute-container" class="attribute-container">
+        <div class="column">
+            <p class="attribute">Strength:</p>
+            <p class="score">{{ .Strength }}</p>
+        </div>
+        <div class="column">
+            <p class="attribute">Dexterity:</p>
+            <p class="score">{{ .Dexterity }}</p>
+        </div>
+        <div class="column">
+            <p class="attribute">Constitution:</p>
+            <p class="score">{{ .Constitution }}</p>
+        </div>
+        <div class="column">
+            <p class="attribute">Intelligence:</p>
+            <p class="score">{{ .Intelligence }}</p>
+        </div>
+        <div class="column">
+            <p class="attribute">Wisdom:</p>
+            <p class="score">{{ .Wisdom }}</p>
+        </div>
+        <div class="column">
+            <p class="attribute">Charisma:</p>
+            <p class="score">{{ .Charisma }}</p>
+        </div>
+    </div>
+    <h3>Traits</h3>
+    <p>
+        Name: {{ .Name }}<br>
+        Gender: {{ .Gender }}<br>
+        Age: {{ .Age }}<br>
+        Relationships: {{ .Relationships }}<br>
+        Motivation: {{ .Motivation }}
+    </p>
+    <h3>Background</h3>
+    <p>
+        {{ .Background}}
+    </p>
+    <h3>Appearance</h3>
+    <p>
+        {{ .Appearance}}
+    </p>
 </body>
 
 </html>
