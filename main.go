@@ -61,6 +61,9 @@ type apiConfig struct {
 
 type npc_context struct {
 	Character_name         string
+	Character_race         string
+	Character_gender       string
+	Character_income       string
 	Town_size              string
 	Technology_level       string
 	Magic_level            string
@@ -104,7 +107,13 @@ func (apiCFG *apiConfig) Load_context() (npc_context, error) {
 }
 
 func construct_message(myContext npc_context) ([]openai.ChatCompletionMessage, error) {
+	//consider changing this setup so the passed object is iterable.
 	stringSlice := []string{
+		myContext.Character_name,
+		myContext.Character_race,
+		myContext.Character_gender,
+		myContext.Character_income,
+		myContext.Town_size,
 		myContext.Technology_level,
 		myContext.Magic_level,
 		myContext.Character_identity,
@@ -121,7 +130,7 @@ func construct_message(myContext npc_context) ([]openai.ChatCompletionMessage, e
 		},
 		{
 			Role: openai.ChatMessageRoleSystem,
-			Content: "Please provide information in the following format:\n" +
+			Content: "Please format information as follows:\n" +
 				"Strength: \n" +
 				"Dexterity: \n" +
 				"Constitution: \n" +
@@ -131,6 +140,7 @@ func construct_message(myContext npc_context) ([]openai.ChatCompletionMessage, e
 				"Name: \n" +
 				"Gender: \n" +
 				"Age: \n" +
+				"Race: \n" +
 				"Relationships: ?\n" +
 				"Motivation: \n" +
 				"Background: \n" +
@@ -138,7 +148,7 @@ func construct_message(myContext npc_context) ([]openai.ChatCompletionMessage, e
 		},
 		{
 			Role: openai.ChatMessageRoleUser,
-			Content: `Please provide information for the following fields:\n
+			Content: `Please generate information for the following questions:\n
 			What is the character's Strength?\n
 			What is the character's Dexterity?\n
 			What is the character's Constitution?\n
@@ -148,6 +158,7 @@ func construct_message(myContext npc_context) ([]openai.ChatCompletionMessage, e
 			What is the character's Name?\n
 			What is the character's Gender?\n
 			What is the character's Age?\n
+			What is the character's Race?
 			Tell me about the character's Relationships.\n
 			What motivates the character?\n
 			Describe the character's Background.\n
@@ -203,13 +214,29 @@ func (apiCFG *apiConfig) gen_background(w http.ResponseWriter, r *http.Request) 
 		return "", nil
 	}
 
+	//when you change here, you also have to change the internal string slice at construct message.
 	if r.URL.Query().Get("fname") != "" {
-		myContext.Character_name = "The character's name is " + r.URL.Query().Get("tech") + "."
+		myContext.Character_name = "The character's name is " + r.URL.Query().Get("fname") + "."
 	} else {
-		myContext.Character_name = "Please pick a name appropriate to the technology level."
+		myContext.Character_name = "Please pick a name appropriate to the technology level and the character's background."
+	}
+	if r.FormValue("race") != "" {
+		myContext.Character_race = "The character's race is " + r.FormValue("race") + "."
+	} else {
+		myContext.Character_race = "The character's race is human."
+	}
+	if r.FormValue("gender") != "" {
+		myContext.Character_gender = "The character's gender is " + r.FormValue("gender") + "."
+	} else {
+		myContext.Character_gender = "Please pick a gender for the character."
+	}
+	if r.FormValue("income") != "" {
+		myContext.Character_income = "The character's income level is " + r.FormValue("income") + "."
+	} else {
+		myContext.Character_income = "Please pick an income level for the character."
 	}
 	if r.URL.Query().Get("size") != "Random" && r.URL.Query().Get("size") != "" {
-		myContext.Town_size = "The character lives in a town of " + r.URL.Query().Get("tech") + " people."
+		myContext.Town_size = "The character lives in a town of " + r.URL.Query().Get("size") + " people."
 	} else if r.URL.Query().Get("size") == "Random" {
 		myContext.Town_size = "Randomly choose how big a town the character is from."
 	} else {
@@ -265,26 +292,55 @@ func (apiCFG *apiConfig) landing_page(w http.ResponseWriter, r *http.Request) {
 		}
 
 		split_resp := strings.Split(response, "\n")
-		if len(split_resp) != 13 {
-			respondWithError(w, 500, "Template mismatch, you get raw data!\n\n"+response)
-			return
+		fields := templateFields{}
+		if len(split_resp) == 14 {
+			//take each line from the response, split it at the colon, take the second half, remove the leading space.
+			fields = templateFields{
+				Strength:      strings.Split(split_resp[0], ":")[1][1:],
+				Dexterity:     strings.Split(split_resp[1], ":")[1][1:],
+				Constitution:  strings.Split(split_resp[2], ":")[1][1:],
+				Intelligence:  strings.Split(split_resp[3], ":")[1][1:],
+				Wisdom:        strings.Split(split_resp[4], ":")[1][1:],
+				Charisma:      strings.Split(split_resp[5], ":")[1][1:],
+				Name:          strings.Split(split_resp[6], ":")[1][1:],
+				Gender:        strings.Split(split_resp[7], ":")[1][1:],
+				Age:           strings.Split(split_resp[8], ":")[1][1:],
+				Race:          strings.Split(split_resp[9], ":")[1][1:],
+				Relationships: strings.Split(split_resp[10], ":")[1][1:],
+				Motivation:    strings.Split(split_resp[11], ":")[1][1:],
+				Background:    strings.Split(split_resp[12], ":")[1][1:],
+				Appearance:    strings.Split(split_resp[13], ":")[1][1:],
+			}
+		} else {
+			//make a dictionary of terms, check the response for matches
+			fields_dict := map[string]string{}
+			for _, row := range split_resp {
+				split_row := strings.Split(row, ": ")
+				if len(split_row) > 1 {
+					fields_dict[split_row[0]] = split_row[1]
+					if len(split_row) > 2 {
+						fmt.Println("Data lost because it contained an extra colon")
+					}
+				}
+			}
+			fields = templateFields{
+				Strength:      fields_dict["Strength"],
+				Dexterity:     fields_dict["Dexterity"],
+				Constitution:  fields_dict["Constitution"],
+				Intelligence:  fields_dict["Intelligence"],
+				Wisdom:        fields_dict["Wisdom"],
+				Charisma:      fields_dict["Charisma"],
+				Name:          fields_dict["Name"],
+				Gender:        fields_dict["Gender"],
+				Age:           fields_dict["Age"],
+				Race:          fields_dict["Race"],
+				Relationships: fields_dict["Relationships"],
+				Motivation:    fields_dict["Motivation"],
+				Background:    fields_dict["Background"],
+				Appearance:    fields_dict["Appearance"],
+			}
 		}
-		//take each line from the response, split it at the colon, take the second half, remove the leading space.
-		fields := templateFields{
-			Strength:      strings.Split(split_resp[0], ":")[1][1:],
-			Dexterity:     strings.Split(split_resp[1], ":")[1][1:],
-			Constitution:  strings.Split(split_resp[2], ":")[1][1:],
-			Intelligence:  strings.Split(split_resp[3], ":")[1][1:],
-			Wisdom:        strings.Split(split_resp[4], ":")[1][1:],
-			Charisma:      strings.Split(split_resp[5], ":")[1][1:],
-			Name:          strings.Split(split_resp[6], ":")[1][1:],
-			Gender:        strings.Split(split_resp[7], ":")[1][1:],
-			Age:           strings.Split(split_resp[8], ":")[1][1:],
-			Relationships: strings.Split(split_resp[9], ":")[1][1:],
-			Motivation:    strings.Split(split_resp[10], ":")[1][1:],
-			Background:    strings.Split(split_resp[11], ":")[1][1:],
-			Appearance:    strings.Split(split_resp[12], ":")[1][1:],
-		}
+
 		tmpl, err := loadTemplate()
 		if err != nil {
 			respondWithError(w, 500, "Internal Server Error")
@@ -314,6 +370,7 @@ type templateFields struct {
 	Name          string
 	Gender        string
 	Age           string
+	Race          string
 	Relationships string
 	Motivation    string
 	Background    string

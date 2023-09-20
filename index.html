@@ -15,7 +15,26 @@
             <label for="char_name">Name (leave blank to randomize)</label>
             <input type="text" id="char_name" name="fname">
         </p>
-
+        <p>
+            <label for="race">Race (leave blank for human)</label><br>
+            <textarea name="race" id="race" rows="1" cols="20" maxlength="40"></textarea>
+        </p>
+        <p>
+            <label for="gender">Gender (leave blank to
+                randomize)</label><br>
+            <textarea name="gender" id="gender" rows="1" cols="20" maxlength="40"></textarea>
+        </p>
+        <p>
+            <label for="income">Income:</label>
+            <select name="income" id="income">
+                <option value="Random">Random</option>
+                <option value="penniless">Penniless</option>
+                <option value="struggling">Struggling</option>
+                <option value="breaking even">Breaking even</option>
+                <option value="comfortable">Comfortable</option>
+                <option value="wealthy">Wealthy</option>
+            </select>
+        </p>
         <p>
             <label for="size">Number of people in town:</label>
             <select name="size" id="size">

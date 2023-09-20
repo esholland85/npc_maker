@@ -59,6 +59,7 @@
         Name: {{ .Name }}<br>
         Gender: {{ .Gender }}<br>
         Age: {{ .Age }}<br>
+        Race: {{ .Race }}<br>
         Relationships: {{ .Relationships }}<br>
         Motivation: {{ .Motivation }}
     </p>
@@ -70,6 +71,17 @@
     <p>
         {{ .Appearance}}
     </p>
+    <button id="reloadButton">New Character</button>
+
+    <script>
+        // Add an event listener to the button
+        document.getElementById('reloadButton').addEventListener('click', function () {
+            // Use JavaScript to navigate back to the root of the current page
+            var currentPageURL = window.location.href;
+            var rootURL = currentPageURL.substr(0, currentPageURL.lastIndexOf('/'));
+            window.location.href = rootURL + "/character";
+        });
+    </script>
 </body>
 
 </html>
