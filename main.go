@@ -3,23 +3,28 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"html/template"
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/joho/godotenv"
 	"github.com/sashabaranov/go-openai"
+	"golang.org/x/crypto/bcrypt"
 )
 
 func main() {
 	r := chi.NewRouter()
-	char := chi.NewRouter()
-	//adminR := chi.NewRouter()
+	charR := chi.NewRouter()
+	loginR := chi.NewRouter()
 	corsWrapped := middlewareCors(r)
 	httpServer := http.Server{
 		Addr:    ":8080",
@@ -30,12 +35,20 @@ func main() {
 	apiCFG := &apiConfig{}
 	//apiCfg.secret = os.Getenv("JWT_SECRET")
 	apiCFG.gptKey = os.Getenv("alpha_test_gpt_key")
+	apiCFG.secret = os.Getenv("JWT_SECRET")
 	apiCFG.context_path = "./resources/.context"
-	apiCFG.mux = &sync.RWMutex{}
+	apiCFG.context_mux = &sync.RWMutex{}
+	apiCFG.db_path = "./resources/database.json"
+	apiCFG.db_mux = &sync.RWMutex{}
 
-	//r.Mount("/admin", adminR)
-	r.Mount("/character", char)
-	char.Get("/", apiCFG.landing_page)
+	//apiCFG.LoadDB()
+
+	r.Mount("/login", loginR)
+	r.Mount("/character", charR)
+	charR.Get("/", apiCFG.landing_page)
+	loginR.Get("/", apiCFG.login_page)
+	loginR.Post("/", apiCFG.login_page)
+	loginR.Post("/signup", apiCFG.UserHandler)
 
 	httpServer.ListenAndServe()
 }
@@ -55,8 +68,11 @@ func middlewareCors(next http.Handler) http.Handler {
 
 type apiConfig struct {
 	gptKey       string
+	secret       string
 	context_path string
-	mux          *sync.RWMutex
+	context_mux  *sync.RWMutex
+	db_path      string
+	db_mux       *sync.RWMutex
 }
 
 type npc_context struct {
@@ -72,9 +88,45 @@ type npc_context struct {
 	Anachronism_treatment  string
 }
 
+type Character struct {
+	Strength      string
+	Dexterity     string
+	Constitution  string
+	Intelligence  string
+	Wisdom        string
+	Charisma      string
+	Name          string
+	Gender        string
+	Age           string
+	Race          string
+	Relationships string
+	Motivation    string
+	Background    string
+	Appearance    string
+}
+
+type dbStructure struct {
+	Users      map[int]User         `json:"users"`
+	Auths      map[string]Auth      `json:"auths"`
+	Characters map[string]Character `json:"characters"`
+}
+
+type User struct {
+	Email         string `json:"email"`
+	ID            int    `json:"id"`
+	Password      string `json:"password"`
+	Is_Subscribed bool   `json:"is_subscribed"`
+}
+
+type Auth struct {
+	Token       string    `json:"token"`
+	Revoked     bool      `json:"revoked"`
+	TimeRevoked time.Time `json:"timerevoked"`
+}
+
 func (apiCFG *apiConfig) Load_context() (npc_context, error) {
-	apiCFG.mux.RLock()
-	defer apiCFG.mux.RUnlock()
+	apiCFG.context_mux.RLock()
+	defer apiCFG.context_mux.RUnlock()
 	contents, err := os.ReadFile(apiCFG.context_path)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -170,11 +222,11 @@ func construct_message(myContext npc_context) ([]openai.ChatCompletionMessage, e
 }
 
 func respondWithError(w http.ResponseWriter, code int, msg string) {
-	type chirpError struct {
+	type internalError struct {
 		Error string `json:"error"`
 	}
 
-	errorResponse := chirpError{
+	errorResponse := internalError{
 		Error: msg,
 	}
 
@@ -292,10 +344,10 @@ func (apiCFG *apiConfig) landing_page(w http.ResponseWriter, r *http.Request) {
 		}
 
 		split_resp := strings.Split(response, "\n")
-		fields := templateFields{}
+		fields := Character{}
 		if len(split_resp) == 14 {
 			//take each line from the response, split it at the colon, take the second half, remove the leading space.
-			fields = templateFields{
+			fields = Character{
 				Strength:      strings.Split(split_resp[0], ":")[1][1:],
 				Dexterity:     strings.Split(split_resp[1], ":")[1][1:],
 				Constitution:  strings.Split(split_resp[2], ":")[1][1:],
@@ -323,7 +375,7 @@ func (apiCFG *apiConfig) landing_page(w http.ResponseWriter, r *http.Request) {
 					}
 				}
 			}
-			fields = templateFields{
+			fields = Character{
 				Strength:      fields_dict["Strength"],
 				Dexterity:     fields_dict["Dexterity"],
 				Constitution:  fields_dict["Constitution"],
@@ -351,6 +403,15 @@ func (apiCFG *apiConfig) landing_page(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func (apiCFG *apiConfig) login_page(w http.ResponseWriter, r *http.Request) {
+	values := r.URL.Query()
+	if len(values) == 0 && r.Method == "GET" {
+		http.ServeFile(w, r, "./login.html")
+	} else {
+		apiCFG.LoginHandler(w, r)
+	}
+}
+
 func loadTemplate() (*template.Template, error) {
 	templateFile := "./resources/character.html"
 	tmpl, err := template.ParseFiles((templateFile))
@@ -360,27 +421,434 @@ func loadTemplate() (*template.Template, error) {
 	return tmpl, nil
 }
 
-type templateFields struct {
-	Strength      string
-	Dexterity     string
-	Constitution  string
-	Intelligence  string
-	Wisdom        string
-	Charisma      string
-	Name          string
-	Gender        string
-	Age           string
-	Race          string
-	Relationships string
-	Motivation    string
-	Background    string
-	Appearance    string
-}
-
-func parseTemplate(w http.ResponseWriter, data templateFields, tmpl *template.Template) {
+func parseTemplate(w http.ResponseWriter, data Character, tmpl *template.Template) {
 	err := tmpl.Execute(w, data)
 	if err != nil {
 		fmt.Println("template not executed")
 		respondWithError(w, 500, "Internal Server Error")
 	}
+}
+
+func (apiCFG *apiConfig) LoadDB() (dbStructure, error) {
+	apiCFG.db_mux.RLock()
+	defer apiCFG.db_mux.RUnlock()
+	contents, err := os.ReadFile(apiCFG.db_path)
+	if err != nil {
+		if os.IsNotExist(err) {
+
+			saveFile, err2 := json.Marshal(dbStructure{
+				Users:      map[int]User{},
+				Auths:      map[string]Auth{},
+				Characters: map[string]Character{},
+			})
+			if err2 != nil {
+				return dbStructure{}, err2
+			}
+			err3 := os.WriteFile(apiCFG.db_path, saveFile, os.ModePerm)
+			if err3 != nil {
+				fmt.Println(err3)
+			}
+			return dbStructure{}, nil
+		}
+		fmt.Println(err)
+	}
+
+	dbData := dbStructure{}
+
+	err = json.Unmarshal([]byte(contents), &dbData)
+	if err != nil {
+		fmt.Println("Error: ", err)
+		return dbStructure{}, err
+	}
+
+	return dbData, nil
+}
+
+func (apiCFG *apiConfig) SaveDB(currentDB dbStructure) {
+	apiCFG.db_mux.Lock()
+	defer apiCFG.db_mux.Unlock()
+	saveFile, err := json.Marshal(currentDB)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	os.WriteFile(apiCFG.db_path, saveFile, os.ModePerm)
+}
+
+func (apiCFG *apiConfig) NewUser(newUser User) error {
+	currentDB, err := apiCFG.LoadDB()
+	if err != nil {
+		fmt.Println(err)
+		return err
+	}
+
+	wholeDB, err2 := apiCFG.LoadDB()
+	if err2 != nil {
+		fmt.Println("failed to load database")
+	}
+	allUsers := wholeDB.Users
+	exists := false
+
+	for _, user := range allUsers {
+		if user.Email == newUser.Email {
+			exists = true
+			break
+		}
+	}
+
+	if exists {
+		err := errors.New("User already exists")
+		return err
+	}
+
+	currentDB.Users[newUser.ID] = newUser
+
+	apiCFG.SaveDB(currentDB)
+
+	return nil
+}
+
+func (apiCFG *apiConfig) UserHandler(w http.ResponseWriter, r *http.Request) {
+	wholeDB, err1 := apiCFG.LoadDB()
+	if err1 != nil {
+		respondWithError(w, http.StatusInternalServerError, "Server experienced an error")
+		return
+	}
+	userCount := len(wholeDB.Users)
+
+	decoder := json.NewDecoder(r.Body)
+	params := User{}
+	err2 := decoder.Decode(&params)
+	if err2 != nil {
+		respondWithError(w, http.StatusInternalServerError, "Couldn't decode parameters")
+		return
+	}
+
+	if len(params.Email) == 0 {
+		respondWithError(w, 400, "No email detected")
+		return
+	}
+	if len(params.Password) == 0 {
+		respondWithError(w, 400, "No password detected")
+		return
+	}
+
+	hashedPassword, err3 := bcrypt.GenerateFromPassword([]byte(params.Password), 0)
+	if err3 != nil {
+		fmt.Println("failed to hash password")
+		return
+	}
+
+	userToSave := User{
+		Email:         params.Email,
+		ID:            userCount + 1,
+		Password:      string(hashedPassword),
+		Is_Subscribed: false,
+	}
+
+	type response struct {
+		Email         string `json:"email"`
+		ID            int    `json:"id"`
+		Is_Subscribed bool   `json:"is_subscribed"`
+	}
+
+	newResponse := response{
+		Email:         userToSave.Email,
+		ID:            userToSave.ID,
+		Is_Subscribed: userToSave.Is_Subscribed,
+	}
+
+	err4 := apiCFG.NewUser(userToSave)
+	if err4 != nil {
+		respondWithError(w, 500, err4.Error())
+		return
+	}
+
+	respondWithJSON(w, 201, newResponse)
+}
+
+func (apiCFG *apiConfig) LoginHandler(w http.ResponseWriter, r *http.Request) {
+	type LoginAttempt struct {
+		Password string `json:"password"`
+		Email    string `json:"email"`
+	}
+
+	decoder := json.NewDecoder(r.Body)
+	params := LoginAttempt{}
+	err := decoder.Decode(&params)
+	if err != nil {
+		respondWithError(w, 500, "Can't decode request")
+		return
+	}
+
+	if len(params.Email) == 0 {
+		respondWithError(w, 400, "No email detected")
+		return
+	}
+	if len(params.Password) == 0 {
+		respondWithError(w, 400, "No password detected")
+		return
+	}
+
+	wholeDB, err := apiCFG.LoadDB()
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	//this seems like a very clumsy way to manage users.
+	//it's leftover from where I first implemented this code but looking up users by ID
+	//when the most common point of interaction is going to be email login
+	//seems like it would process badly.
+	allUsers := wholeDB.Users
+
+	var currentUser User
+	currentUser.ID = 0
+
+	for _, user := range allUsers {
+		if user.Email == params.Email {
+			currentUser = user
+			break
+		}
+	}
+
+	if currentUser.ID == 0 {
+		respondWithError(w, 401, "Email and password combination not found")
+		return
+	}
+	err2 := bcrypt.CompareHashAndPassword([]byte(currentUser.Password), []byte(params.Password))
+	if err2 != nil {
+		respondWithError(w, 401, "Email and password combination not found")
+		return
+	}
+	type response struct {
+		ID            int    `json:"id"`
+		Email         string `json:"email"`
+		Token         string `json:"token"`
+		Refresh_Token string `json:"refresh_token"`
+		Is_Subscribed bool   `json:"is_subscribed"`
+	}
+
+	expiry := jwt.NewNumericDate(time.Now().Add(time.Hour))
+	refreshExpiry := jwt.NewNumericDate(time.Now().Add(time.Hour * 1440))
+
+	accessClaim := jwt.RegisteredClaims{
+		Issuer:    "counterpoint-access",
+		IssuedAt:  jwt.NewNumericDate(time.Now()),
+		ExpiresAt: expiry,
+		Subject:   strconv.Itoa(currentUser.ID),
+	}
+	refreshClaim := jwt.RegisteredClaims{
+		Issuer:    "counterpoint-refresh",
+		IssuedAt:  jwt.NewNumericDate(time.Now()),
+		ExpiresAt: refreshExpiry,
+		Subject:   strconv.Itoa(currentUser.ID),
+	}
+
+	newAccessToken := jwt.NewWithClaims(jwt.SigningMethodHS256, accessClaim)
+	signedAccessToken, err3 := newAccessToken.SignedString([]byte(apiCFG.secret))
+	if err3 != nil {
+		fmt.Println(err3)
+		respondWithError(w, 500, "token signing failed")
+		return
+	}
+	newRefreshToken := jwt.NewWithClaims(jwt.SigningMethodHS256, refreshClaim)
+	signedRefreshToken, err4 := newRefreshToken.SignedString([]byte(apiCFG.secret))
+	if err4 != nil {
+		fmt.Println(err4)
+		respondWithError(w, 500, "token signing failed")
+		return
+	}
+
+	dbToken := Auth{
+		Token:   signedRefreshToken,
+		Revoked: false,
+	}
+
+	wholeDB.Auths[signedRefreshToken] = dbToken
+	apiCFG.SaveDB(wholeDB)
+
+	userResponse := response{
+		ID:            currentUser.ID,
+		Email:         currentUser.Email,
+		Token:         signedAccessToken,
+		Refresh_Token: signedRefreshToken,
+		Is_Subscribed: currentUser.Is_Subscribed,
+	}
+
+	respondWithJSON(w, 200, userResponse)
+}
+
+func (apiCFG *apiConfig) AuthenticateUser(w http.ResponseWriter, r *http.Request) (int, bool) {
+
+	token, err1 := HeaderToToken(r, apiCFG)
+	if err1 != nil {
+		fmt.Println(err1)
+		errIntro := err1.Error()
+		if errIntro == "Unauthorized" {
+			respondWithError(w, 401, "Unauthorized")
+			return 0, false
+		}
+		respondWithError(w, 500, "Internal Server Error")
+		return 0, false
+	}
+
+	issuer, err2 := token.Claims.GetIssuer()
+	if err2 != nil {
+		respondWithError(w, 500, "Internal Server Error")
+		return 0, false
+	}
+	if issuer == "counterpoint-refresh" {
+		respondWithError(w, 401, "Unauthorized")
+		return 0, false
+	}
+
+	userID, err3 := token.Claims.GetSubject()
+	if err3 != nil {
+		respondWithError(w, 500, "Internal Server Error")
+		return 0, false
+	}
+
+	intID, err4 := strconv.Atoi(userID)
+	if err4 != nil {
+		respondWithError(w, 500, "Internal Server Error")
+		return 0, false
+	}
+
+	return intID, true
+}
+
+func (apiCFG *apiConfig) RefreshToken(w http.ResponseWriter, r *http.Request) {
+	//try printing token.raw to make sure it is what I think it is.
+	token, err := HeaderToToken(r, apiCFG)
+	if err != nil {
+		if err.Error() == "Unauthorized" {
+			respondWithError(w, 401, "Unathorized")
+			return
+		}
+		respondWithError(w, 500, "Internal Server Error")
+		return
+	}
+
+	issuer, err2 := token.Claims.GetIssuer()
+	if err2 != nil {
+		respondWithError(w, 500, "Internal Server Error")
+		return
+	}
+	if issuer == "counterpoint-access" {
+		respondWithError(w, 401, "Unauthorized")
+		return
+	}
+
+	wholeDB, err3 := apiCFG.LoadDB()
+	if err3 != nil {
+		respondWithError(w, 500, "Internal Server Error")
+		return
+	}
+	refreshTokens := wholeDB.Auths
+
+	for _, dbToken := range refreshTokens {
+		if dbToken.Revoked && dbToken.Token == token.Raw {
+			respondWithError(w, 401, "Unauthorized")
+			return
+		}
+	}
+
+	type ResponseObject struct {
+		Token string `json:"token"`
+	}
+
+	expiry := jwt.NewNumericDate(time.Now().Add(time.Hour))
+
+	id, err4 := token.Claims.GetSubject()
+	if err4 != nil {
+		respondWithError(w, 500, "Internal Server Error")
+		return
+	}
+
+	accessClaim := jwt.RegisteredClaims{
+		Issuer:    "counterpoint-access",
+		IssuedAt:  jwt.NewNumericDate(time.Now()),
+		ExpiresAt: expiry,
+		Subject:   id,
+	}
+
+	newAccessToken := jwt.NewWithClaims(jwt.SigningMethodHS256, accessClaim)
+	signedAccessToken, err5 := newAccessToken.SignedString([]byte(apiCFG.secret))
+	if err5 != nil {
+		fmt.Println(err5)
+		respondWithError(w, 500, "token signing failed")
+		return
+	}
+
+	response := ResponseObject{
+		Token: signedAccessToken,
+	}
+
+	respondWithJSON(w, 200, response)
+}
+
+func (apiCFG *apiConfig) RevokeToken(w http.ResponseWriter, r *http.Request) {
+	token, err := HeaderToToken(r, apiCFG)
+	if err != nil {
+		if err.Error() == "Unauthorized" {
+			respondWithError(w, 401, "Unathorized")
+			return
+		}
+		respondWithError(w, 500, "Internal Server Error")
+		return
+	}
+
+	issuer, err2 := token.Claims.GetIssuer()
+	if err2 != nil {
+		respondWithError(w, 500, "Internal Server Error")
+		return
+	}
+	if issuer == "counterpoint-access" {
+		respondWithError(w, 401, "Unauthorized")
+		return
+	}
+
+	revokedToken := Auth{
+		Token:       token.Raw,
+		Revoked:     true,
+		TimeRevoked: time.Now(),
+	}
+
+	wholeDB, err3 := apiCFG.LoadDB()
+	if err3 != nil {
+		respondWithError(w, 500, "Internal Server Error")
+	}
+	wholeDB.Auths[token.Raw] = revokedToken
+	apiCFG.SaveDB(wholeDB)
+
+	respondWithJSON(w, 200, []byte{})
+}
+
+func HeaderToToken(r *http.Request, apiCFG *apiConfig) (*jwt.Token, error) {
+	tokenHeader := r.Header.Get("Authorization")
+	tokenString := strings.Replace(tokenHeader, "Bearer ", "", 1)
+
+	type MyCustomClaims struct {
+		jwt.RegisteredClaims
+	}
+
+	localFunc := func(token *jwt.Token) (interface{}, error) {
+		return []byte(apiCFG.secret), nil
+	}
+
+	token, err := jwt.ParseWithClaims(tokenString, &MyCustomClaims{}, localFunc)
+	if err != nil {
+		fmt.Println(err)
+		errIntro := err.Error()[:18]
+		if errIntro == "token is malformed" {
+			return &jwt.Token{}, errors.New("Unauthorized")
+		}
+		if !token.Valid {
+			return &jwt.Token{}, errors.New("Unauthorized")
+		} else {
+			return &jwt.Token{}, err
+		}
+	}
+	return token, nil
 }
