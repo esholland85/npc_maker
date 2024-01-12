@@ -24,6 +24,7 @@ import (
 )
 
 func main() {
+	fmt.Println("booting up server")
 	r := chi.NewRouter()
 	charR := chi.NewRouter()
 	loginR := chi.NewRouter()
@@ -61,6 +62,7 @@ func main() {
 	r.Post("/submit-refresh", apiCFG.RefreshToken)
 	r.Get("/verify", apiCFG.VerifyEmailHandler)
 
+	fmt.Println("preparing to listen")
 	httpServer.ListenAndServe()
 }
 
