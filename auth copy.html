@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+
+<body>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            // Check if a token exists in session storage
+            const DaypassToken = sessionStorage.getItem('DaypassToken');
+
+            if (DaypassToken) {
+                // Token exists, proceed with the authentication request.
+                const authCurrentURL = window.location.href + "/auth";
+                console.log("sending auth request")
+                fetch(authCurrentURL, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${DaypassToken}`
+                    }
+                })
+                    .then(response => {
+                        if (response.ok) {
+                            // Authentication succeeded, response contains the HTML content.
+                            console.log("got html back");
+                            return response.text(); // Get the HTML content as text
+                        } else {
+                            // Authentication failed, handle the error or redirect if needed.
+                            sessionStorage.removeItem('DaypassToken');
+                            localStorage.removeItem('NPCTavernToken');
+                            throw new Error('Authentication failed');
+                        }
+                    })
+                    .then(htmlContent => {
+                        // Replace the current page's content with the authenticated HTML content
+                        console.log("doing something with HTML")
+                        document.body.innerHTML = htmlContent;
+                    })
+                    .catch(error => {
+                        // Handle network errors or authentication failures.
+                        console.log(error)
+                    });
+            } else {
+                // Token doesn't exist or is invalid, redirect to the login page.
+                window.location.href = '/login';
+            }
+        });
+    </script>
+</body>
+
+</html>

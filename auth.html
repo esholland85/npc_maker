@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+
+<body>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            // Check if a token exists in session storage
+            const DaypassToken = sessionStorage.getItem('DaypassToken');
+
+            if (DaypassToken) {
+                // Token exists, authorization hasn't been requested, request now
+                decodedToken = JSON.parse(atob(DaypassToken.split('.')[1]));
+                currentTime = Math.floor(Date.now() / 1000);
+                isExpired = decodedToken.exp < currentTime;
+                if (isExpired) {
+                    sessionStorage.removeItem('DaypassToken');
+                    window.location.href = "/login";
+                }
+
+                const authCurrentURL = "/character";
+                console.log("sending auth request")
+                fetch(authCurrentURL, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${DaypassToken}`
+                    }
+                })
+                    .then(response => {
+                        if (response.ok) {
+                            // Authentication succeeded, response contains the HTML content.
+                            console.log("got html back");
+                            return response.text(); // Get the HTML content as text
+                        } else {
+                            // Authentication failed, handle the error or redirect if needed.
+                            sessionStorage.removeItem('DaypassToken');
+                            localStorage.removeItem('NPCTavernToken');
+                            throw new Error('Authentication failed');
+                        }
+                    })
+                    .then(htmlContent => {
+                        blob = new Blob([htmlContent], { type: 'text/html' });
+                        tempURL = URL.createObjectURL(blob);
+                        window.location.href = tempURL;
+                    })
+                    .catch(error => {
+                        // Handle network errors or authentication failures.
+                        console.log(error)
+                    });
+            } else {
+                // Token doesn't exist or is invalid, redirect to the login page.
+                window.location.href = '/login';
+            }
+        });
+    </script>
+</body>
+
+</html>

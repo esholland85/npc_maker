@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>My New Character</title>
+    <style>
+        .attribute-container {
+            display: flex;
+            justify-content: space-between;
+            border: 2px outset black;
+        }
+
+        .column {
+            text-align: center;
+        }
+
+        .attribute {
+            border: 2px outset black;
+            background-color: rgb(141, 155, 167);
+            text-align: center;
+            font-weight: bold;
+        }
+
+        .score {
+            text-align: center;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="attribute-container" class="attribute-container">
+        <div class="column">
+            <p class="attribute">Strength:</p>
+            <p class="score" id="strength"></p>
+        </div>
+        <div class="column">
+            <p class="attribute">Dexterity:</p>
+            <p class="score" id="dexterity"></p>
+        </div>
+        <div class="column">
+            <p class="attribute">Constitution:</p>
+            <p class="score" id="constitution"></p>
+        </div>
+        <div class="column">
+            <p class="attribute">Intelligence:</p>
+            <p class="score" id="intelligence"></p>
+        </div>
+        <div class="column">
+            <p class="attribute">Wisdom:</p>
+            <p class="score" id="wisdom"></p>
+        </div>
+        <div class="column">
+            <p class="attribute">Charisma:</p>
+            <p class="score" id="charisma"></p>
+        </div>
+    </div>
+    <h3>Traits</h3>
+    <p>
+        Name: <span id="name"></span><br>
+        Gender: <span id="gender"></span><br>
+        Age: <span id="age"></span><br>
+        Race: <span id="race"></span><br>
+        Relationships: <span id="relationships"></span><br>
+        Motivation: <span id="motivation"></span>
+    </p>
+    <h3>Background</h3>
+    <p>
+        <span id="background"></span>
+    </p>
+    <h3>Appearance</h3>
+    <p>
+        <span id="appearance"></span>
+    </p>
+    <button id="reloadButton">New Character</button>
+
+    <script>
+        // Add an event listener to the button
+        document.getElementById('reloadButton').addEventListener('click', function () {
+            window.location.href = `/character`;
+        });
+
+        function fillCharacterData(data) {
+            document.getElementById('strength').textContent = data.Strength;
+            // Repeat this for other attributes
+
+            document.getElementById('name').textContent = data.Name;
+            document.getElementById('gender').textContent = data.Gender;
+            document.getElementById('age').textContent = data.Age;
+            document.getElementById('race').textContent = data.Race;
+            document.getElementById('relationships').textContent = data.Relationships;
+            document.getElementById('motivation').textContent = data.Motivation;
+            document.getElementById('background').textContent = data.Background;
+            document.getElementById('appearance').textContent = data.Appearance;
+        }
+
+        function fetchCharacterData() {
+            const DaypassToken = sessionStorage.getItem('DaypassToken');
+
+            if (DaypassToken) {
+                fetch("auth", {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${DaypassToken}`
+                    }
+                })
+                    .then(response => {
+                        if (response.ok) {
+                            // Authentication succeeded, response contains the HTML content.
+                            return response.json(); // Get the response as json
+                        } else {
+                            // Authentication failed, handle the error or redirect if needed.
+                            sessionStorage.removeItem('DaypassToken');
+                            localStorage.removeItem('NPCTavernToken');
+                            throw new Error('Authentication failed');
+                        }
+                    })
+                    .then(data => {
+                        // Replace the current page's content with the authenticated HTML content
+                        fillCharacterData(data);
+                    })
+                    .catch(error => {
+                        // Handle network errors or authentication failures.
+                        console.log(error)
+                    });
+            } else {
+                // Token doesn't exist or is invalid, redirect to the login page.
+                window.location.href = '/login';
+            }
+        }
+
+    </script>
+</body>
+
+</html>

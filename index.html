@@ -10,10 +10,10 @@
         To begin making a new character, use options listed below.
     </p>
 
-    <form>
+    <form id="characterForm" action="/character/sheet" method="post">
         <p>
             <label for="char_name">Name (leave blank to randomize)</label>
-            <input type="text" id="char_name" name="fname">
+            <input type="text" id="fname" name="fname">
         </p>
         <p>
             <label for="race">Race (leave blank for human)</label><br>
@@ -77,10 +77,77 @@
             <span id="charCount">0</span>/<span id="maxChars">300</span>
         </p>
         <p>
-            <input type="submit" value="Submit">
+            <input type="submit" value="Submit" id="submitButton">
         </p>
     </form>
     <script>
+        // Add an event listener to the form for form submission
+        /*document.getElementById("characterForm").addEventListener("submit", function (event) {
+            event.preventDefault();
+
+            // Get user inputs
+            const char_name = document.getElementById("char_name").value;
+            const race = document.getElementById("race").value;
+            const gender = document.getElementById("gender").value;
+            const income = document.getElementById("income").value;
+            const size = document.getElementById("size").value;
+            const tech = document.getElementById("tech").value;
+            const mLevel = document.getElementById("mLevel").value;
+            const role = document.getElementById("role").value;
+
+            // Create a character_input object with the inputs
+            const character_input = {
+                char_name: fname,
+                race: race,
+                gender: gender,
+                income: income,
+                size: size,
+                tech: tech,
+                mLevel: mLevel,
+                role: role,
+            };
+
+            // Fetch your server endpoint with a POST request
+            const DaypassToken = sessionStorage.getItem('DaypassToken');
+
+            if (DaypassToken) {
+                // Token exists, authorization hasn't been requested, request now
+                decodedToken = JSON.parse(atob(DaypassToken.split('.')[1]));
+                currentTime = Math.floor(Date.now() / 1000);
+                isExpired = decodedToken.exp < currentTime;
+                if (isExpired) {
+                    sessionStorage.removeItem('DaypassToken');
+                    window.location.href = "http://localhost:8080/login";
+                }
+
+                submitButton = document.getElementById("submitButton");
+                submitButton.disabled = true;
+                fetch('http://localhost:8080/character/sheet', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${DaypassToken}`,
+                    },
+                    body: JSON.stringify(character_input),
+                })
+                    .then(response => {
+                        if (response.ok) {
+                            return response.text();
+                        } else {
+                            window.location.href = `http://localhost:8080/login`;
+                        }
+                    })
+                    .then(htmlContent => {
+                        //document.body.innerHTML = htmlContent;
+                        blob = new Blob([htmlContent], { type: 'text/html' });
+                        tempURL = URL.createObjectURL(blob);
+                        window.location.href = tempURL;
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                    });
+            }
+        });*/
         // Get references to the textarea and character count elements
         const textarea = document.getElementById("role");
         const charCount = document.getElementById("charCount");

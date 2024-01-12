@@ -30,28 +30,42 @@
 </head>
 
 <body>
-    <form id="loginForm">
-        <input type="text" id="email" name="email" placeholder="Email">
-        <input type="password" id="password" name="password" placeholder="Password">
-        <input type="submit" value="Login">
-        <button id="signupButton" type="button">Sign Up</button>
-    </form>
+    {{if .InvalidLogin}}<div id="errorMessage" name="errorMessage" style="color:red;">{{.ErrorMessage}} </div>{{end}}
 
-    <!-- Create a div to display error messages -->
-    <div id="errorMessage" style="color: red;"></div>
+
+
+
+    {{if .UserName}}
+    <p>Hello <b>{{.UserName}}</b>! <a href="/character">Make a character!</a>
+    </p>
+    {{end}}
+
+    <form method="post" action="/login">
+        {{if .UserName}}
+        <input type="submit" name="Logout" value="Logout">
+        {{else}}
+        <input type="text" id="emailId" name="email" placeholder="Email" value={{.UserEmail}}>
+        <input type="password" id="PasswordId" name="password" placeholder="Password">
+        <input type="submit" name="Login" value="Login">
+        <button id="signupButton" type="button">Sign Up</button>
+        {{if .NotVerified}}
+        <button id="requestVerification" type="submit" formaction="/request-verification">Request Verification
+            Email</button>
+        {{end}}
+        {{end}}
+    </form>
 
     <!-- Create an overlay and popup for signup -->
     <div id="signupOverlay" class="overlay">
-        <div id="signupPopup" class="popup">
+        <form id="signupPopup" class="popup" method="post" action="/login/signup">
             <h2>Sign Up</h2>
             <input type="text" id="signupEmail" name="signupEmail" placeholder="Email">
             <input type="password" id="signupPassword" name="signupPassword" placeholder="Password">
             <input type="password" id="confirmPassword" name="confirmPassword" placeholder="Confirm Password">
             <div id="passwordMismatch" style="color: red;"></div>
             <button id="signupSubmit">Submit</button>
-        </div>
+        </form>
     </div>
-
     <script>
         // Show the signup popup when the signup button is clicked
         document.getElementById("signupButton").addEventListener("click", function () {
@@ -66,7 +80,6 @@
             }
         });
 
-        // Handle the signup form submission
         document.getElementById("signupSubmit").addEventListener("click", function (event) {
             event.preventDefault();
             const signupEmail = document.getElementById("signupEmail").value;
@@ -115,45 +128,6 @@
                     console.error('Error:', error);
                 });
         });
-
-        document.getElementById("loginForm").addEventListener("submit", function (event) {
-            event.preventDefault();
-
-            const email = document.getElementById("email").value;
-            const password = document.getElementById("password").value;
-
-            const user = {
-                email: email,
-                password: password,
-            };
-
-            fetch('/login', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(user),
-            })
-                .then(response => {
-                    // Check for 400 or 500 level responses
-                    if (response.status >= 400) {
-                        // Display error message in red text
-                        return response.json().then(data => {
-                            document.getElementById("errorMessage").innerText = data.error;
-                            throw new Error(data.error);
-                        });
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    // Handle the response from the server here
-                    console.log(data);
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                });
-        });
-
     </script>
 </body>
 

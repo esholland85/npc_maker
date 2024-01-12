@@ -76,10 +76,7 @@
     <script>
         // Add an event listener to the button
         document.getElementById('reloadButton').addEventListener('click', function () {
-            // Use JavaScript to navigate back to the root of the current page
-            var currentPageURL = window.location.href;
-            var rootURL = currentPageURL.substr(0, currentPageURL.lastIndexOf('/'));
-            window.location.href = rootURL + "/character";
+            window.location.href = `/character`;
         });
     </script>
 </body>

@@ -1,1 +1,22 @@
-{"users":{"1":{"email":"GL","id":1,"password":"$2a$10$Wfe/CZ2VetIJnimK9KWYteeUGvGahYmTwxK9rLFtTur.k7Gef/yzW","is_subscribed":false}},"auths":{"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJjb3VudGVycG9pbnQtcmVmcmVzaCIsInN1YiI6IjEiLCJleHAiOjE3MDA0NzY1NDEsImlhdCI6MTY5NTI5MjU0MX0.fvFP_QLCkKWlGAPjLzqxczo3HozGu1MTXZQIclaqVpI":{"token":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJjb3VudGVycG9pbnQtcmVmcmVzaCIsInN1YiI6IjEiLCJleHAiOjE3MDA0NzY1NDEsImlhdCI6MTY5NTI5MjU0MX0.fvFP_QLCkKWlGAPjLzqxczo3HozGu1MTXZQIclaqVpI","revoked":false,"timerevoked":"0001-01-01T00:00:00Z"}},"characters":{}}
+{
+    "users": {
+        "1": {
+            "email": "GL",
+            "id": 1,
+            "password": "$2a$10$Wfe/CZ2VetIJnimK9KWYteeUGvGahYmTwxK9rLFtTur.k7Gef/yzW",
+            "is_subscribed": false,
+            "email_verified": true,
+            "Verification_Key": ""
+        },
+        "2": {
+            "email": "urzathran@gmail.com",
+            "id": 2,
+            "password": "$2a$10$U9D1G8Eob5.NLmtxR9i1KOYGfmgEebicVCR/HGa0NkwixKYlWsHTO",
+            "is_subscribed": false,
+            "email_verified": true,
+            "Verification_Key": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJjb3VudGVycG9pbnQtdmVyaWZ5Iiwic3ViIjoiMiIsImV4cCI6MTY5Nzg0ODA2NiwiaWF0IjoxNjk3ODQ0NDY2fQ.GD_aXPaHIpRR4tMSsPYMS3H1uMDgyeWodtKGRvipvVk"
+        }
+    },
+    "auths": {},
+    "characters": {}
+}
