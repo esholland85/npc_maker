@@ -581,9 +581,11 @@ func (apiCFG *apiConfig) UserHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	apiCFG.sendVerificationEmail(params.Email)
+
 	//not actually an error; templating fits desired use case.
 	//update the login page to accept wider feedback, then update this handler
-	respondWithError(w, 500, "User created, please log in")
+	respondWithError(w, 500, "User created, verify email to log in")
 }
 
 func (apiCFG *apiConfig) LoginHandler(w http.ResponseWriter, r *http.Request) {
@@ -955,6 +957,7 @@ func (apiCFG *apiConfig) RequestVerificationHandler(w http.ResponseWriter, r *ht
 }
 
 func (apiCFG *apiConfig) sendVerificationEmail(recipientEmail string) {
+	fmt.Println("request for email received")
 	//prepare email headers
 	var body bytes.Buffer
 
@@ -1021,6 +1024,7 @@ func (apiCFG *apiConfig) sendVerificationEmail(recipientEmail string) {
 
 	//send compiled message
 	sendHtmlEmail(recipientEmail, body.Bytes())
+	fmt.Println("email sent")
 }
 
 func (apiCFG *apiConfig) getUser(userEmail string) (User, error) {

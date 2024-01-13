@@ -7,14 +7,6 @@
             "is_subscribed": false,
             "email_verified": true,
             "Verification_Key": ""
-        },
-        "2": {
-            "email": "urzathran@gmail.com",
-            "id": 2,
-            "password": "$2a$10$U9D1G8Eob5.NLmtxR9i1KOYGfmgEebicVCR/HGa0NkwixKYlWsHTO",
-            "is_subscribed": false,
-            "email_verified": true,
-            "Verification_Key": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJjb3VudGVycG9pbnQtdmVyaWZ5Iiwic3ViIjoiMiIsImV4cCI6MTY5Nzg0ODA2NiwiaWF0IjoxNjk3ODQ0NDY2fQ.GD_aXPaHIpRR4tMSsPYMS3H1uMDgyeWodtKGRvipvVk"
         }
     },
     "auths": {},
