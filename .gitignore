@@ -1,3 +1,4 @@
 .env
 out
 myServer.exe
+resources/database.json

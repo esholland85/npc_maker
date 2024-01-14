@@ -1011,7 +1011,7 @@ func (apiCFG *apiConfig) sendVerificationEmail(recipientEmail string) {
 		Message     string
 	}{
 		Salutation:  "Welcome!",
-		Destination: "http:// 35.91.239.144:8080/verify?token=" + signedAccessToken,
+		Destination: "http://35.91.239.144:8080/verify?token=" + signedAccessToken,
 		LinkText:    "Click here",
 		Message:     "to verify your email account.",
 	} /*{

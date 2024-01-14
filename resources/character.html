@@ -72,12 +72,36 @@
         {{ .Appearance}}
     </p>
     <button id="reloadButton">New Character</button>
+    <button id="exportButton">Copy to Clipboard</button>
 
     <script>
         // Add an event listener to the button
         document.getElementById('reloadButton').addEventListener('click', function () {
             window.location.href = `/character`;
         });
+
+        document.getElementById('exportButton').addEventListener('click', function () {
+            let characterInfo = '';
+            characterInfo += document.getElementById('attribute-container').innerText + '\n';
+            characterInfo += 'Traits\n';
+            characterInfo += document.getElementsByTagName('body')[0].childNodes[5].innerText + '\n';
+            characterInfo += 'Background\n';
+            characterInfo += document.getElementsByTagName('body')[0].childNodes[7].innerText + '\n';
+            characterInfo += 'Appearance\n';
+            characterInfo += document.getElementsByTagName('body')[0].childNodes[9].innerText;
+
+            copyTextToClipboard(characterInfo);
+            alert('Character info exported to clipboard!');
+        });
+
+        function copyTextToClipboard(text) {
+            const textArea = document.createElement('textarea');
+            textArea.value = text;
+            document.body.appendChild(textArea);
+            textArea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textArea);
+        }
     </script>
 </body>
 
