@@ -50,6 +50,7 @@ func main() {
 	session.Global.Close()
 	session.Global = session.NewCookieManagerOptions(session.NewInMemStore(), &session.CookieMngrOptions{AllowHTTP: true})
 
+	r.Get("/", apiCFG.char_input)
 	r.Mount("/login", loginR)
 	r.Mount("/character", charR)
 	charR.Get("/", apiCFG.char_input)
