@@ -44,7 +44,7 @@
         {{if .UserName}}
         <input type="submit" name="Logout" value="Logout">
         {{else}}
-        <input type="text" id="emailId" name="email" placeholder="Email" value={{.UserEmail}}>
+        <input type="text" id="emailId" name="email" placeholder="{{if .UserEmail}}{{.UserEmail}}{{else}}Email{{end}}">
         <input type="password" id="PasswordId" name="password" placeholder="Password">
         <input type="submit" name="Login" value="Login">
         <button id="signupButton" type="button">Sign Up</button>
